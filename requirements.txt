@@ -1,0 +1,8 @@
+deepgram-sdk>=3.5,<4.0
+sounddevice>=0.4
+numpy>=1.24
+keyboard>=0.13
+pyperclip>=1.8
+pystray>=0.19
+Pillow>=10.0
+python-dotenv>=1.0
