@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
+GROQ_API_KEY     = os.getenv("GROQ_API_KEY", "")
 HOTKEY = os.getenv("HOTKEY", "space")
 HOLD_DELAY = float(os.getenv("HOLD_DELAY", "1.0"))
 SAMPLE_RATE = 16000
@@ -164,21 +165,30 @@ class Transcriber:
                 wf.writeframes(audio.tobytes())
             buf.seek(0)
 
-            client = DeepgramClient(DEEPGRAM_API_KEY)
-            opts = PrerecordedOptions(
-                model="nova-2",
-                language="ru",
-                smart_format=True,
-                punctuate=True,
-            )
-            resp = client.listen.rest.v("1").transcribe_file(
-                {"buffer": buf.read(), "mimetype": "audio/wav"}, opts
-            )
-            text = resp.results.channels[0].alternatives[0].transcript.strip()
+            if GROQ_API_KEY:
+                from groq import Groq
+                client = Groq(api_key=GROQ_API_KEY)
+                result = client.audio.transcriptions.create(
+                    file=("audio.wav", buf.read()),
+                    model="whisper-large-v3-turbo",
+                    language="ru",
+                    response_format="text",
+                )
+                text = (result if isinstance(result, str) else result.text).strip()
+            else:
+                client = DeepgramClient(DEEPGRAM_API_KEY)
+                opts = PrerecordedOptions(
+                    model="nova-2", language="ru",
+                    smart_format=True, punctuate=True,
+                )
+                resp = client.listen.rest.v("1").transcribe_file(
+                    {"buffer": buf.read(), "mimetype": "audio/wav"}, opts
+                )
+                text = resp.results.channels[0].alternatives[0].transcript.strip()
 
             if text:
                 pyperclip.copy(text)
-                time.sleep(0.6)
+                time.sleep(0.15)
                 _paste_via_winapi()
                 winsound.Beep(1200, 80)
             else:
@@ -248,9 +258,9 @@ class Transcriber:
 
 
 if __name__ == "__main__":
-    if not DEEPGRAM_API_KEY:
+    if not GROQ_API_KEY and not DEEPGRAM_API_KEY:
         print(
-            "ОШИБКА: Укажите DEEPGRAM_API_KEY в файле .env\n"
+            "ОШИБКА: Укажите GROQ_API_KEY или DEEPGRAM_API_KEY в файле .env\n"
             "Шаблон: .env.example",
             file=sys.stderr,
         )
