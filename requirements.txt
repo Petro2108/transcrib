@@ -1,3 +1,4 @@
+pip-system-certs
 groq>=0.9
 deepgram-sdk>=3.5,<4.0
 sounddevice>=0.4

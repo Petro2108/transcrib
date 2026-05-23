@@ -165,17 +165,22 @@ class Transcriber:
                 wf.writeframes(audio.tobytes())
             buf.seek(0)
 
+            text = None
             if GROQ_API_KEY:
-                from groq import Groq
-                client = Groq(api_key=GROQ_API_KEY)
-                result = client.audio.transcriptions.create(
-                    file=("audio.wav", buf.read()),
-                    model="whisper-large-v3-turbo",
-                    language="ru",
-                    response_format="text",
-                )
-                text = (result if isinstance(result, str) else result.text).strip()
-            else:
+                try:
+                    from groq import Groq
+                    client = Groq(api_key=GROQ_API_KEY, timeout=2.0)
+                    result = client.audio.transcriptions.create(
+                        file=("audio.wav", buf.read()),
+                        model="whisper-large-v3-turbo",
+                        language="ru",
+                        response_format="text",
+                    )
+                    text = (result if isinstance(result, str) else result.text).strip()
+                except Exception:
+                    buf.seek(0)  # сброс для Deepgram
+
+            if text is None and DEEPGRAM_API_KEY:
                 client = DeepgramClient(DEEPGRAM_API_KEY)
                 opts = PrerecordedOptions(
                     model="nova-2", language="ru",
